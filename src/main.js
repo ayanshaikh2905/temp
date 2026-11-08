@@ -10,13 +10,14 @@ scene.background = new THREE.Color(COLORS.paper);
 scene.fog = new THREE.Fog(COLORS.mist, RENDER.fogNear, RENDER.fogFar);
 
 const camera = new THREE.PerspectiveCamera(CAMERA.fov, window.innerWidth / window.innerHeight, CAMERA.near, CAMERA.far);
-camera.position.set(0, CAMERA.height, PLAYER_Z);
+camera.position.set(0, CAMERA.height, PLAYER_Z + CAMERA.distance);
+camera.lookAt(0, CAMERA.lookHeight, 3);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDER.maxPixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-document.body.appendChild(renderer.domElement);
+document.querySelector('#app').appendChild(renderer.domElement);
 
 const sun = new THREE.DirectionalLight(COLORS.white, LIGHT.sunIntensity);
 sun.position.set(LIGHT.sunPosition.x, LIGHT.sunPosition.y, LIGHT.sunPosition.z);

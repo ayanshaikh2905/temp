@@ -47,6 +47,7 @@ export function updatePlayer(player, camera, delta, keys) {
   }
   const target = player.position.clone();
   target.y += 1.2;
-  camera.position.lerp(new THREE.Vector3(player.position.x, player.position.y + CAMERA.height, player.position.z + CAMERA.distance), 1 - Math.exp(-CAMERA.follow * delta));
+  const desiredCamera = new THREE.Vector3(player.position.x, player.position.y + CAMERA.height, player.position.z + CAMERA.distance);
+  camera.position.lerp(desiredCamera, 1 - Math.exp(-CAMERA.follow * delta));
   camera.lookAt(target);
 }
