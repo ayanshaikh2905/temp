@@ -4,6 +4,7 @@ const mouseHeld = new Set()
 const mousePressed = new Set()
 const mouseBuffer = new Set()
 const buffer = new Map()
+const BUFFER_TIME = 0.15
 
 export function createInput(element) {
   window.addEventListener('keydown', (event) => {
@@ -20,7 +21,7 @@ export function createInput(element) {
   element.addEventListener('contextmenu', (event) => event.preventDefault())
   return {
     update(delta) {
-      for (const code of pressed) buffer.set(code, 0.15)
+      for (const code of pressed) buffer.set(code, BUFFER_TIME)
       for (const button of mousePressed) mouseBuffer.add(button)
       for (const [code, time] of buffer) {
         const next = time - delta
@@ -32,11 +33,9 @@ export function createInput(element) {
     },
     held(code) { return held.has(code) },
     pressed(code) { return buffer.has(code) },
-    mousePressed(button) {
-      const value = mouseBuffer.has(button)
-      mouseBuffer.delete(button)
-      return value
-    },
+    consume(code) { return buffer.delete(code) },
+    mousePressed(button) { return mouseBuffer.has(button) },
+    consumeMouse(button) { return mouseBuffer.delete(button) },
     clearPressed() { buffer.clear() }
   }
 }

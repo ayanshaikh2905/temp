@@ -30,10 +30,8 @@ export const WORLD = {
 
 export const PLAYER = {
   radius: 0.45,
-  height: 1.8,
+  height: 1.85,
   speed: 4.2,
-  acceleration: 14,
-  damping: 9,
   spawn: { x: 0, z: 7 },
   stairLimitX: 4.1,
   stairStartZ: 10.4,
@@ -48,8 +46,51 @@ export const CAMERA = {
   near: 0.1,
   far: 180,
   sensitivity: 0.0025,
-  minPitch: 0.15,
-  maxPitch: 1.1
+  minPitch: -0.15,
+  maxPitch: 1.2,
+  invertY: false
+}
+
+export const PHYSICS = {
+  gravity: -24,
+  accel: 14,
+  decel: 18,
+  turnRate: 10,
+  actionTurnRate: 4,
+  groundSnap: 0.18,
+  impulseDamping: 7,
+  sprintSpeed: 6.2
+}
+
+export const BODY = {
+  hipHeight: 0.95,
+  thighLength: 0.44,
+  shinLength: 0.44,
+  ankleHeight: 0.08,
+  footLength: 0.26,
+  pelvisChest: 0.3,
+  chestShoulders: 0.28,
+  shoulderHalfWidth: 0.21,
+  upperArmLength: 0.28,
+  foreArmLength: 0.26,
+  handLength: 0.1,
+  neckLength: 0.08,
+  headRadius: 0.14
+}
+
+export const GAIT = {
+  strideLength: 1.3,
+  stepHeight: 0.11,
+  pelvisBob: 0.025,
+  pelvisSway: 0.018,
+  torsoTwist: 0.08
+}
+
+export const SECONDARY = {
+  hatSpring: 18,
+  sashGravity: -14,
+  sashDrag: 0.86,
+  sashLength: 0.12
 }
 
 export const ROLL = {

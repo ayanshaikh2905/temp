@@ -40,7 +40,7 @@ export function createArena() {
   edge.rotation.x = Math.PI / 2
   edge.position.y = WORLD.arenaHeight / 2 + 0.1
   for (let index = 0; index < WORLD.stairCount; index += 1) {
-    const height = WORLD.arenaHeight / 2 - (WORLD.stairCount - index) * WORLD.stairRise
+    const height = WORLD.arenaHeight / 2 - index * WORLD.stairRise
     const stair = addOutlinedMesh(arena, new THREE.BoxGeometry(WORLD.stairWidth, WORLD.stairRise * (WORLD.stairCount + 1), WORLD.stairDepth), stoneMaterial)
     stair.position.set(0, height - stair.geometry.parameters.height / 2, PLAYER_STAIR_Z(index))
   }
@@ -52,5 +52,5 @@ export function createArena() {
 }
 
 function PLAYER_STAIR_Z(index) {
-  return WORLD.arenaRadius + 1 + index * WORLD.stairDepth
+  return WORLD.arenaRadius + 1 + (WORLD.stairCount - 1 - index) * WORLD.stairDepth
 }
