@@ -11,11 +11,12 @@ export function addStyle() {
     .bar { height: 12px; margin: 4px 0; background: #b7ad94; border: 1px solid #171b1b; }
     .fill { height: 100%; transform-origin: left; }
     #health-fill { background: #9d302c; } #stamina-fill { background: #667d63; height: 7px; }
-    #hint, #lock-overlay, #dead, #fps { position: absolute; }
+    #hint, #lock-overlay, #dead, #fps, #debug { position: absolute; }
     #hint { bottom: 24px; right: 24px; opacity: 1; transition: opacity 1s; }
     #lock-overlay { top: 45%; width: 100%; text-align: center; font-size: 24px; }
     #dead { top: 35%; width: 100%; text-align: center; font-size: 52px; }
     #dead small { display: block; font-size: 20px; } #fps { top: 12px; left: 12px; }
+    #debug { top: 34px; left: 12px; font: 12px monospace; }
     #boss-bar { display: none; }
   `
   document.head.appendChild(style)

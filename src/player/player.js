@@ -1,20 +1,23 @@
 import * as THREE from 'three'
 import { ATTACK, PLAYER, ROLL, STAMINA } from '../config.js'
-import { resolveCollisions } from '../core/collision.js'
+import { createColliders } from '../core/colliders.js'
 import { getGroundHeight } from '../scene/ground.js'
-import { createCharacter } from './character.js'
+import { createRig } from './rig.js'
+import { createController } from './controller.js'
 import { updateAnimation } from './animations.js'
 import { setState, createPlayerState } from './playerStates.js'
 
 const direction = new THREE.Vector3()
-const axis = new THREE.Vector3(0, 1, 0)
 const facing = new THREE.Vector3()
 const offset = new THREE.Vector3()
+const impulse = new THREE.Vector3()
 
-export function createPlayer() {
-  const player = createCharacter()
-  player.position.set(PLAYER.spawn.x, getGroundHeight(PLAYER.spawn.x, PLAYER.spawn.z), PLAYER.spawn.z)
-  player.userData.velocity = new THREE.Vector3()
+export function createPlayer(colliders = createColliders()) {
+  const player = createRig()
+  const controller = createController(colliders)
+  controller.position.set(PLAYER.spawn.x, getGroundHeight(PLAYER.spawn.x, PLAYER.spawn.z), PLAYER.spawn.z)
+  player.position.copy(controller.position)
+  player.userData.controller = controller
   player.userData.state = createPlayerState()
   player.userData.stamina = STAMINA.max
   player.userData.health = 100
@@ -31,76 +34,74 @@ export function updatePlayer(player, cameraRig, delta, input, targets, onHit) {
   state.timer += delta
   data.staminaUsed += delta
   if (state.name === 'dead') {
-    if (input.pressed('KeyR')) resetPlayer(player)
+    if (input.pressed('KeyR')) {
+      input.consume('KeyR')
+      resetPlayer(player)
+    }
     updateAnimation(player, state.name, state.timer, 0, state.mirror)
     return
   }
   if (data.stamina < STAMINA.max && data.staminaUsed > (data.stamina === 0 ? STAMINA.emptyDelay : STAMINA.regenDelay)) {
     data.stamina = Math.min(STAMINA.max, data.stamina + STAMINA.regen * delta)
   }
+  readMove(input, cameraRig.yaw)
   const wantsRoll = input.pressed('Space')
-  const wantsAttack = input.mousePressed(0)
+  const wantsAttack = input.mousePressed(0) && cameraRig.locked
   if (state.name === 'idle' || state.name === 'move') {
-    readMove(input, cameraRig.yaw)
     if (wantsRoll && spendStamina(player, ROLL.cost)) {
+      input.consume('Space')
       setState(state, 'roll')
-      data.rollDirection.copy(direction.lengthSq() > 0 ? direction : facing.set(0, 0, -1).applyAxisAngle(axis, cameraRig.yaw)).normalize()
+      data.rollDirection.copy(direction.lengthSq() > 0 ? direction : facing.set(0, 0, -1).applyAxisAngle(THREE.Object3D.DEFAULT_UP, cameraRig.yaw)).normalize()
+      impulse.copy(data.rollDirection).multiplyScalar(5)
+      data.controller.addImpulse(impulse)
     } else if (wantsAttack && spendStamina(player, ATTACK.cost)) {
+      input.consumeMouse(0)
       setState(state, 'attack')
       data.attackHits.clear()
       state.mirror = !state.mirror
     } else {
-      move(player, delta, cameraRig.yaw, input)
+      if (!cameraRig.locked && wantsAttack) input.consumeMouse(0)
       setState(state, direction.lengthSq() > 0 ? 'move' : 'idle')
     }
   } else if (state.name === 'roll') {
-    const progress = Math.min(1, state.timer / ROLL.duration)
-    player.position.addScaledVector(data.rollDirection, (1 - progress) * ROLL.distance / ROLL.duration * delta * 2)
-    state.invincible = state.timer >= ROLL.invincibleStart && state.timer <= ROLL.invincibleEnd
     if (state.timer >= ROLL.duration) setState(state, 'idle')
   } else if (state.name === 'attack') {
-    if (state.timer <= ATTACK.windup + ATTACK.active) {
-      player.getWorldDirection(facing)
-      player.position.addScaledVector(facing, ATTACK.step * delta / (ATTACK.windup + ATTACK.active))
-      if (state.timer >= ATTACK.windup) hitTargets(player, targets, onHit)
-    } else if (state.timer >= ATTACK.windup + ATTACK.active + ATTACK.recovery) {
+    if (state.timer >= ATTACK.windup && state.timer <= ATTACK.windup + ATTACK.active) hitTargets(player, targets, onHit)
+    if (state.timer >= ATTACK.windup + ATTACK.active + ATTACK.recovery) {
       if (wantsAttack && spendStamina(player, ATTACK.cost)) {
+        input.consumeMouse(0)
         setState(state, 'attack')
         data.attackHits.clear()
         state.mirror = !state.mirror
-      } else setState(state, 'idle')
+        facing.set(Math.sin(player.rotation.y), 0, Math.cos(player.rotation.y))
+        data.controller.addImpulse(facing.multiplyScalar(ATTACK.step / Math.max(ATTACK.windup, 0.01)))
+      } else {
+        setState(state, 'idle')
+      }
     }
   } else if (state.name === 'hurt' && state.timer >= 0.35) {
     setState(state, 'idle')
   }
-  resolveCollisions(player.position, PLAYER.radius)
-  player.position.y = THREE.MathUtils.damp(player.position.y, getGroundHeight(player.position.x, player.position.z), 18, delta)
-  updateAnimation(player, state.name, state.timer, data.velocity.length(), state.mirror)
+  data.controller.update(delta, input, cameraRig.yaw, state.name === 'attack' ? 'attack' : '')
+  player.position.copy(data.controller.position)
+  player.rotation.y = data.controller.facing
+  updateAnimation(player, state.name, state.timer, data.controller.velocity.length(), state.mirror)
 }
 
 function readMove(input, yaw) {
   direction.set(Number(input.held('KeyD')) - Number(input.held('KeyA')), 0, Number(input.held('KeyS')) - Number(input.held('KeyW')))
-  if (direction.lengthSq() > 0) direction.normalize().applyAxisAngle(axis, yaw)
-}
-
-function move(player, delta, yaw, input) {
-  readMove(input, yaw)
-  const velocity = player.userData.velocity
-  velocity.x = THREE.MathUtils.damp(velocity.x, direction.x * PLAYER.speed, PLAYER.acceleration, delta)
-  velocity.z = THREE.MathUtils.damp(velocity.z, direction.z * PLAYER.speed, PLAYER.acceleration, delta)
-  player.position.addScaledVector(velocity, delta)
-  if (direction.lengthSq() > 0) player.rotation.y = THREE.MathUtils.damp(player.rotation.y, Math.atan2(direction.x, direction.z), 14, delta)
+  if (direction.lengthSq() > 0) direction.normalize().applyAxisAngle(THREE.Object3D.DEFAULT_UP, yaw)
 }
 
 function spendStamina(player, cost) {
-  if (player.userData.stamina <= 0) return false
-  player.userData.stamina = Math.max(0, player.userData.stamina - cost)
+  if (player.userData.stamina < cost) return false
+  player.userData.stamina -= cost
   player.userData.staminaUsed = 0
   return true
 }
 
 function hitTargets(player, targets, onHit) {
-  player.getWorldDirection(facing)
+  facing.set(Math.sin(player.rotation.y), 0, Math.cos(player.rotation.y))
   for (const target of targets) {
     if (!target.isAlive || player.userData.attackHits.has(target)) continue
     offset.subVectors(target.position, player.position)
@@ -117,12 +118,27 @@ function takeDamage(player, amount, fromPosition) {
   if (state.name === 'dead' || state.invincible) return
   player.userData.health = Math.max(0, player.userData.health - amount)
   setState(state, player.userData.health === 0 ? 'dead' : 'hurt')
-  if (fromPosition) player.position.addScaledVector(offset.subVectors(player.position, fromPosition).normalize(), 0.25)
+  if (fromPosition) {
+    impulse.subVectors(player.position, fromPosition).setY(0).normalize().multiplyScalar(4)
+    player.userData.controller.addImpulse(impulse)
+  }
 }
 
 function resetPlayer(player) {
-  player.position.set(PLAYER.spawn.x, getGroundHeight(PLAYER.spawn.x, PLAYER.spawn.z), PLAYER.spawn.z)
+  const controller = player.userData.controller
+  controller.position.set(PLAYER.spawn.x, getGroundHeight(PLAYER.spawn.x, PLAYER.spawn.z), PLAYER.spawn.z)
+  controller.velocity.set(0, 0, 0)
+  controller.facing = 0
+  player.position.copy(controller.position)
+  player.rotation.set(0, 0, 0)
+  resetRotations(player)
   player.userData.health = 100
   player.userData.stamina = STAMINA.max
   setState(player.userData.state, 'idle')
+}
+
+function resetRotations(root) {
+  root.traverse((child) => {
+    if (child !== root) child.rotation.set(0, 0, 0)
+  })
 }

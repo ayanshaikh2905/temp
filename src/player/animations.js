@@ -1,31 +1,36 @@
 import * as THREE from 'three'
+import { easeInOutSine } from '../core/math.js'
 
 export function updateAnimation(character, state, time, speed, mirror) {
   const parts = character.userData.parts
+  const phase = time * 8
   const walk = Math.min(1, speed / 4.2)
-  parts.torso.position.y = 1.25 + Math.sin(time * 2) * 0.025
-  parts.armL.rotation.x = 0
-  parts.armR.rotation.x = 0
-  parts.legL.rotation.x = 0
-  parts.legR.rotation.x = 0
-  if (state === 'move') {
-    parts.legL.rotation.x = Math.sin(time * 9) * 0.55 * walk
-    parts.legR.rotation.x = -parts.legL.rotation.x
-    parts.armL.rotation.x = -parts.legL.rotation.x
-    parts.armR.rotation.x = -parts.legR.rotation.x
+  const left = Math.sin(phase) * 0.45 * walk
+  const right = -left
+  parts.thighL.rotation.x = left
+  parts.thighR.rotation.x = right
+  parts.shinL.rotation.x = Math.max(0, -left) * 0.45
+  parts.shinR.rotation.x = Math.max(0, -right) * 0.45
+  parts.upperArmL.rotation.x = -left * 0.65
+  parts.upperArmR.rotation.x = -right * 0.65
+  parts.chest.rotation.z = Math.sin(phase * 0.5) * 0.03 * walk
+  parts.head.rotation.y = 0
+  parts.grip.rotation.z = 0
+  if (state === 'attack') {
+    const progress = Math.min(1, time / 0.62)
+    const slash = Math.sin(easeInOutSine(progress) * Math.PI)
+    parts.chest.rotation.y = (mirror ? -1 : 1) * slash * 0.6
+    parts.upperArmR.rotation.z = (mirror ? -1 : 1) * (0.25 + slash * 1.2)
+    parts.foreArmR.rotation.z = (mirror ? -1 : 1) * slash * 0.6
+  } else {
+    parts.chest.rotation.y = 0
+    parts.upperArmR.rotation.z = 0.18
+    parts.foreArmR.rotation.z = 0
   }
   if (state === 'roll') {
     character.rotation.x = -0.8
-    parts.torso.position.y = 1.1
   } else {
     character.rotation.x = THREE.MathUtils.damp(character.rotation.x, 0, 12, 1 / 60)
-  }
-  if (state === 'attack') {
-    parts.armR.rotation.z = (mirror ? -1 : 1) * Math.sin(Math.min(1, time / 0.32) * Math.PI) * 1.8
-    parts.sword.rotation.z = parts.armR.rotation.z - 0.5
-  } else {
-    parts.armR.rotation.z = 0.18
-    parts.sword.rotation.z = -0.5
   }
   if (state === 'hurt') character.rotation.x = 0.2
   if (state === 'dead') character.rotation.z = -1.5

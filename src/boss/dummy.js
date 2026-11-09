@@ -9,10 +9,18 @@ export function createDummy() {
   addOutlinedMesh(root, new THREE.CylinderGeometry(0.75, 0.75, 0.7, 10), createToonMaterial(COLORS.straw)).position.y = 2.3
   root.userData.health = 200
   root.radius = 0.9
+  root.userData.hitFlash = 0
+  root.userData.materials = root.children.flatMap((child) => child.material ? [child.material] : [])
   Object.defineProperty(root, 'isAlive', { get: () => root.userData.health > 0 })
   root.takeDamage = (amount) => {
     root.userData.health -= amount
+    root.userData.hitFlash = 0.08
     if (root.userData.health <= 0) root.userData.health = 200
+  }
+  root.userData.update = (delta) => {
+    root.userData.hitFlash = Math.max(0, root.userData.hitFlash - delta)
+    const flash = root.userData.hitFlash > 0
+    for (const material of root.userData.materials) material.emissive.setHex(flash ? COLORS.white : 0x000000)
   }
   return root
 }
