@@ -38,7 +38,7 @@ export function updatePlayer(player, cameraRig, delta, input, targets, onHit) {
       input.consume('KeyR')
       resetPlayer(player)
     }
-    updateAnimation(player, state.name, state.timer, 0, state.mirror)
+    updateAnimation(player, state.name, state.timer, 0, state.mirror, player.position.y)
     return
   }
   if (data.stamina < STAMINA.max && data.staminaUsed > (data.stamina === 0 ? STAMINA.emptyDelay : STAMINA.regenDelay)) {
@@ -85,7 +85,7 @@ export function updatePlayer(player, cameraRig, delta, input, targets, onHit) {
   data.controller.update(delta, input, cameraRig.yaw, state.name === 'attack' ? 'attack' : '')
   player.position.copy(data.controller.position)
   player.rotation.y = data.controller.facing
-  updateAnimation(player, state.name, state.timer, data.controller.velocity.length(), state.mirror)
+  updateAnimation(player, state.name, state.timer, data.controller.velocity.length(), state.mirror, data.controller.position.y)
 }
 
 function readMove(input, yaw) {

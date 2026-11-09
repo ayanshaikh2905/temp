@@ -99,6 +99,11 @@ export function createRig() {
   parts.sashTailL.position.set(-0.2, -0.22, -0.05)
   parts.sashTailR = addOutlinedMesh(parts.pelvis, new THREE.BoxGeometry(0.08, 0.42, 0.03), red)
   parts.sashTailR.position.set(0.2, -0.22, -0.05)
+  const ikTargets = group(root, 'ikTargets')
+  parts.footTargetL = group(ikTargets, 'footTargetL')
+  parts.footTargetR = group(ikTargets, 'footTargetR')
+  parts.poleL = group(ikTargets, 'poleL')
+  parts.poleR = group(ikTargets, 'poleR')
   root.userData.parts = parts
   root.userData.height = PLAYER.height ?? 1.85
   return root

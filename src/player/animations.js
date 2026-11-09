@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { easeInOutSine } from '../core/math.js'
+import { BODY } from '../config.js'
+import { solveTwoBoneIK } from './ik.js'
 
-export function updateAnimation(character, state, time, speed, mirror) {
+export function updateAnimation(character, state, time, speed, mirror, groundHeight = character.position.y) {
   const parts = character.userData.parts
   const phase = time * 8
   const walk = Math.min(1, speed / 4.2)
@@ -34,4 +36,11 @@ export function updateAnimation(character, state, time, speed, mirror) {
   }
   if (state === 'hurt') character.rotation.x = 0.2
   if (state === 'dead') character.rotation.z = -1.5
+  parts.footTargetL.position.set(-0.14, groundHeight - character.position.y, 0)
+  parts.footTargetR.position.set(0.14, groundHeight - character.position.y, 0)
+  parts.poleL.position.set(-0.14, groundHeight - character.position.y + 0.1, 0.7)
+  parts.poleR.position.set(0.14, groundHeight - character.position.y + 0.1, 0.7)
+  character.updateMatrixWorld(true)
+  solveTwoBoneIK(parts.thighL, parts.shinL, parts.footL, parts.footTargetL, parts.poleL, BODY.thighLength, BODY.shinLength)
+  solveTwoBoneIK(parts.thighR, parts.shinR, parts.footR, parts.footTargetR, parts.poleR, BODY.thighLength, BODY.shinLength)
 }
